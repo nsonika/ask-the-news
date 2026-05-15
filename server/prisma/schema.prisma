@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Article {
+  id             String         @id
+  title          String
+  link           String?        @unique
+  publishedAt    DateTime?      @map("published_at")
+  contentSnippet String?        @map("content_snippet")
+  fullContent    String?        @map("full_content")
+  source         String?
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @default(now()) @updatedAt @map("updated_at")
+  chunks         ArticleChunk[]
+
+  @@map("articles")
+}
+
+model ArticleChunk {
+  id         String   @id
+  articleId  String   @map("article_id")
+  chunkIndex Int      @map("chunk_index")
+  text       String
+  embedding  Unsupported("vector(1024)")
+  createdAt  DateTime @default(now()) @map("created_at")
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, chunkIndex])
+  @@index([articleId])
+  @@map("article_chunks")
+}
