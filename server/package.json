@@ -4,8 +4,10 @@
   "description": "Backend-only mini RAG chat over latest tech news.",
   "main": "src/server.ts",
   "scripts": {
+    "build": "tsc",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
+    "start:prod": "node dist/server.js",
     "ingest": "tsx src/scripts/ingest.ts",
     "eval": "tsx src/scripts/evals.ts",
     "typecheck": "tsc --noEmit",
