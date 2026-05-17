@@ -90,6 +90,18 @@ VITE_API_BASE_URL=http://localhost:3000
 During local development, the Vite client proxies API requests to
 `http://localhost:3000`.
 
+## RSS Feed
+
+The default feed is TechCrunch:
+
+```text
+https://techcrunch.com/feed/
+```
+
+The RSS feed gives article metadata and links. The ingestion flow follows each
+link, extracts the article body, chunks the extracted text, and embeds those
+chunks for retrieval.
+
 ## Install
 
 From the project root:
