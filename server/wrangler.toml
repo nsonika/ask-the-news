@@ -1,0 +1,14 @@
+name = "ask-the-news-worker"
+main = "src/worker/index.ts"
+compatibility_date = "2026-06-04"
+
+[triggers]
+crons = ["0 0 */2 * *"]
+
+[vars]
+GROQ_MODEL = "llama-3.1-8b-instant"
+RSS_FEED_URL = "https://techcrunch.com/feed/"
+TOP_K = "3"
+FETCH_FULL_ARTICLES = "true"
+ARTICLE_FETCH_TIMEOUT_MS = "10000"
+EMBEDDING_DIMENSIONS = "1024"

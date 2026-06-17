@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { NextFunction, Request, Response } from "express";
-import { answerQuestion, streamAnswer } from "../services/groq.service";
+import { answerQuestion, streamAnswer } from "../services/rag.service";
 
 export const chatRouter = Router();
 

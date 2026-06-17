@@ -11,26 +11,38 @@
     "ingest": "tsx src/scripts/ingest.ts",
     "eval": "tsx src/scripts/evals.ts",
     "typecheck": "tsc --noEmit",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
+    "worker:typecheck": "tsc --noEmit -p tsconfig.worker.json",
     "prisma:generate": "prisma generate"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
+    "@langchain/core": "^1.1.48",
+    "@neondatabase/serverless": "^1.1.0",
     "@prisma/client": "^6.19.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "groq-sdk": "^0.15.0",
+    "langchain": "^1.4.4",
+    "langsmith": "^0.7.3",
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.7.0",
+    "@cloudflare/workers-types": "^4.20260604.1",
     "prisma": "^6.19.3",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.98.0"
   }
 }

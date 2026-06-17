@@ -1,96 +1,75 @@
 # Ask The News
 
-Full-stack RAG news app.
+A news app. It reads RSS articles, embeds the text with
+Jina, stores chunks in pgvector, retrieves relevant chunks, and asks Groq
+to answer from that context.
 
-The backend ingests TechCrunch articles, extracts article text, chunks it,
-creates embeddings with Jina, stores vectors in Postgres/pgvector, retrieves
-relevant chunks for a question, and asks Groq to answer using only that
-retrieved context. The frontend is a React UI for asking questions and viewing
-the answer sources.
-
-## Architecture
+## Flow
 
 ```text
-TechCrunch RSS
-  -> fetch article links
-  -> extract article text
+RSS articles
   -> chunk text
-  -> create Jina embeddings
-  -> store articles and chunks in Postgres pgvector
-  -> retrieve top-k chunks for a question
-  -> add neighbor chunks for context
-  -> generate grounded answer with Groq
+  -> Jina embeddings
+  -> pgvector
+  -> user question
+  -> top-k retrieval
+  -> Groq answer with sources
 ```
+
+## Apps
+
+```text
+client/   React UI
+server/   Express backend plus optional Cloudflare Worker backend
+```
+
+The Express backend is useful for local development. The Cloudflare Worker is
+the deployed backend and also runs cron ingestion every 2 days.
 
 ## Tech Stack
 
-Backend:
+### Backend
 
-- Node.js
 - Express
+- Cloudflare Workers
 - TypeScript
-- Prisma
-- Postgres / Neon
-- pgvector
+- RSS parsing
+- Postgres + pgvector
 - Jina embeddings
 - Groq chat completions
+- LangChain prompt templates
+- LangSmith tracing
 - SSE streaming
 
-Frontend:
+### Frontend
 
 - React
 - Vite
 - TypeScript
-- TanStack Query
+- TanStack React Query
 - Zustand
 - Zod
 
-## Project Structure
+## Folder Structure
 
 ```text
 client/
   src/
-    api/
-    components/
-    config/
-    hooks/
-    schemas/
-    stores/
-    utils/
+    api/          API calls
+    components/   UI components
+    hooks/        React Query hooks
+    schemas/      Zod schemas
+    stores/       Zustand state
 
 server/
-  prisma/
-    migrations/
-    schema.prisma
   src/
-    app.ts
-    server.ts
-    config/
-    db/
-    middlewares/
-    repositories/
-    routes/
-    scripts/
-    services/
-    types/
-    utils/
-```
-
-## Environment
-
-Create `server/.env`:
-
-```bash
-PORT=3000
-JINA_API_KEY=your_jina_api_key
-GROQ_API_KEY=your_groq_api_key
-GROQ_MODEL=llama-3.1-8b-instant
-RSS_FEED_URL=https://techcrunch.com/feed/
-TOP_K=3
-FETCH_FULL_ARTICLES=true
-ARTICLE_FETCH_TIMEOUT_MS=10000
-DATABASE_URL=your_postgres_or_neon_url
-EMBEDDING_DIMENSIONS=1024
+    core/         shared RAG logic for Worker
+    db/           Prisma client + Neon repository
+    routes/       Express routes
+    services/     Express services
+    worker/       Cloudflare Worker entrypoint
+  prisma/         schema and migrations
+  wrangler.toml   Cloudflare Worker config
 ```
 
 ## RSS Feed
@@ -102,16 +81,23 @@ https://techcrunch.com/feed/
 ```
 
 The RSS feed provides article metadata such as title, link, publish date, and a
-short description. During ingestion, the backend follows each article `link` and
+short description. During ingestion, the backend follows each article link and
 tries to extract the full article body before chunking and embedding it.
 
-Optional client env:
+## LangSmith
 
-```bash
-VITE_API_BASE_URL=http://localhost:3000
+LangSmith is used to trace the RAG flow in the Express backend:
+
+```text
+question -> embedding -> retrieval -> prompt -> Groq answer
 ```
 
-## Install
+This makes it easier to inspect retrieval quality, prompts, model calls, and
+latency while testing.
+
+## Setup
+
+Install dependencies:
 
 ```bash
 cd server
@@ -121,104 +107,86 @@ cd ../client
 npm install
 ```
 
-## Database
-
-Run migrations before ingesting articles:
+Create `server/.env` for local Express development:
 
 ```bash
-cd server
-npx prisma migrate deploy
-npm run prisma:generate
+PORT=3000
+DATABASE_URL=your_neon_postgres_url
+JINA_API_KEY=your_jina_key
+GROQ_API_KEY=your_groq_key
+GROQ_MODEL=llama-3.1-8b-instant
+RSS_FEED_URL=https://techcrunch.com/feed/
+TOP_K=3
+FETCH_FULL_ARTICLES=true
+ARTICLE_FETCH_TIMEOUT_MS=10000
+EMBEDDING_DIMENSIONS=1024
 ```
 
-The migration creates:
+For the client, set the backend URL:
 
-```text
-articles
-article_chunks
-_prisma_migrations
+```bash
+VITE_API_BASE_URL=http://localhost:3000
+```
+
+For production, use the Cloudflare Worker URL instead:
+
+```bash
+VITE_API_BASE_URL=https://ask-the-news-worker.sonika-ask-news.workers.dev
 ```
 
 ## Run Locally
 
-Start the backend:
+Express backend:
 
 ```bash
 cd server
 npm run dev
 ```
 
-Start the frontend:
+React client:
 
 ```bash
 cd client
 npm run dev
 ```
 
-Open:
-
-```text
-http://localhost:5173
-```
-
-## Ingest News
+Cloudflare Worker backend:
 
 ```bash
+cd server
+npm run worker:dev
+```
+
+## API
+
+```bash
+curl http://localhost:3000/health
+
 curl -X POST http://localhost:3000/ingest \
   -H "Content-Type: application/json" \
   -d '{"limit": 10}'
-```
 
-## Ask A Question
-
-```bash
 curl -X POST http://localhost:3000/chat \
   -H "Content-Type: application/json" \
   -d '{"question": "What is happening with GoPro?"}'
 ```
 
-## Search Only
+Worker ingest requires the `x-ingest-token` header.
+
+## Deploy Worker
+
+Set Cloudflare secrets:
 
 ```bash
-curl -X POST http://localhost:3000/search \
-  -H "Content-Type: application/json" \
-  -d '{"question": "GoPro defense pivot", "topK": 3}'
+cd server
+npx wrangler secret put DATABASE_URL
+npx wrangler secret put JINA_API_KEY
+npx wrangler secret put GROQ_API_KEY
+npx wrangler secret put INGEST_TOKEN
 ```
 
-## SSE Streaming
+Deploy:
 
 ```bash
-curl -N "http://localhost:3000/chat/stream?question=What%20is%20happening%20with%20GoPro%3F"
-```
-
-The stream emits:
-
-```text
-event: token
-event: sources
-event: done
-```
-
-## Scripts
-
-Server:
-
-```bash
-npm run dev
-npm run start
-npm run build
-npm run start:prod
-npm run ingest
-npm run eval
-npm run typecheck
-npm run prisma:generate
-```
-
-Client:
-
-```bash
-npm run dev
-npm run build
-npm run lint
-npm run preview
+npm run worker:deploy
 ```

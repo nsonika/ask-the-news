@@ -1,4 +1,4 @@
-import { answerQuestion } from "./groq.service";
+import { answerQuestion } from "./rag.service";
 import { loadArticles } from "./retrieval.service";
 
 export const evals = [
